@@ -6,6 +6,8 @@
 }
 
 .wrapper {
+  display: flex;
+  flex-wrap: wrap;
 }
 
 .blue {
@@ -18,4 +20,18 @@
 
 .black {
   background-color: black;
+}
+
+@media (max-width: 1000px) {
+  .wrapper {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1001px) {
+  .wrapper {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
