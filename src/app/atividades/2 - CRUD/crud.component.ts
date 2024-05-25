@@ -1,51 +1,75 @@
-import { Component, OnInit } from '@angular/core';
+import { CadastroService } from './../../services/CadastroService/cadastroService';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { MatDialog } from "@angular/material/dialog"
 import { FormularioComponent } from './formulario/formulario.component';
-import { asLiteral } from '@angular/compiler/src/render3/view/util';
 import { FormControl } from '@angular/forms';
+import { CadastroItem } from 'src/app/services/CadastroService/type';
+import { Observable, Subject } from 'rxjs';
+import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 @Component({
   selector: 'app-crud',
   templateUrl: './crud.component.html',
   styleUrls: ['./crud.component.scss']
 })
-export class CrudComponent implements OnInit {
+export class CrudComponent implements OnInit, OnDestroy {
+  data$: Observable<CadastroItem[]> = this.cadastroService.getDataSubject();
+  private destroy$ = new Subject<void>();
 
-  constructor(private dialog: MatDialog) { }
+  constructor(private dialog: MatDialog, private cadastroService: CadastroService) { }
 
-  filtro = new FormControl()
+  filtro = new FormControl();
 
   displayedColumns: string[] = ['actions', 'nome', 'email', 'senha', 'cep', 'logradouro'];
-
-  dataSource = [
-    { nome: "Teste1", email: "teste@email1.com", senha: "1234", cep: "80250104", logradouro: "Rua teste" }
-  ]
+  dataSource: CadastroItem[] = [];
 
   ngOnInit(): void {
-    this.filtro.valueChanges.subscribe(valor => {
-      this.filtrar("")
-    })
+    this.filtro.valueChanges.pipe(
+      takeUntil(this.destroy$),
+      debounceTime(300),
+      distinctUntilChanged()
+    ).subscribe(valor => {
+      this.filtrar(valor);
+    });
+
+    this.data$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(data => {
+      this.dataSource = data;
+    });
   }
 
-  filtrar(arg: string) {
-    console.log("filtrando...") //não remover essa linha
+  filtrar(valor: string) {
+    this.cadastroService.getDataSubject().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(data => {
+      this.dataSource = data.filter(item => {
+        return item.nome.toLowerCase().includes(valor.toLowerCase());
+      });
+    });
   }
 
   adicionar() {
-    this.dialog.open(FormularioComponent)
+    const dialogRef = this.dialog.open(FormularioComponent);
+    dialogRef.afterClosed().subscribe(() => {
+      console.log('O diálogo foi fechado');
+    });
   }
 
-  editar(pessoa: Pessoa) {
-    this.dialog.open(FormularioComponent)
+  editar(pessoa: CadastroItem, index: number) {
+    this.dialog.open(FormularioComponent, {
+      data: { pessoa: pessoa, index: index } 
+    });
   }
 
-  remover(pessoa: Pessoa) {
-    if (!confirm("Deseja remover a pessoa ${pessoa.nome}")) return
-
-    alert("removido com sucesso!")
+  remover(pessoa: CadastroItem, index: number) {
+    if (!confirm("Deseja remover a pessoa "  + pessoa.nome )) return;
+    this.cadastroService.removeData(index); 
+    alert("removido com sucesso!");
   }
-}
 
-class Pessoa {
-  constructor(nome: string,) { }
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 }
