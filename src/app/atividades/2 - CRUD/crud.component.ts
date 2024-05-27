@@ -40,6 +40,7 @@ export class CrudComponent implements OnInit, OnDestroy {
   }
 
   filtrar(valor: string) {
+    console.log("filtrando...") //não remover essa linha
     this.cadastroService.getDataSubject().pipe(
       takeUntil(this.destroy$)
     ).subscribe(data => {
